@@ -1,6 +1,7 @@
 import { productsRepository } from '../repositories/products.repository.js';
 import { PRODUCT_STATUS } from '../constants/index.js';
 import { ApiError } from '../utils/api-error.js';
+import { assertValidObjectId } from '../utils/object-id.js';
 
 const allowedFields = ['name', 'description', 'price', 'stock'];
 const hasField = (data, key) => Object.prototype.hasOwnProperty.call(data, key);
@@ -60,6 +61,7 @@ export const createProductsService = (repository) => ({
   },
 
   async getById(id) {
+    assertValidObjectId(id);
     const product = await repository.findById(id);
     if (!product) throw new ApiError(404, 'Producto no encontrado');
     return product;
@@ -70,12 +72,14 @@ export const createProductsService = (repository) => ({
   },
 
   async update(id, data) {
+    assertValidObjectId(id);
     const updated = await repository.updateById(id, normalizeProduct(data, true));
     if (!updated) throw new ApiError(404, 'Producto no encontrado');
     return updated;
   },
 
   async remove(id) {
+    assertValidObjectId(id);
     const deleted = await repository.deleteById(id);
     if (!deleted) throw new ApiError(404, 'Producto no encontrado');
   }

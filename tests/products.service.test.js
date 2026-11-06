@@ -25,7 +25,7 @@ test('un producto sin stock queda agotado', async () => {
 
 test('al modificar el stock se actualiza el estado', async () => {
   const service = createProductsService(makeRepository());
-  const product = await service.update('identificador', { stock: 0 });
+  const product = await service.update('6ae76b2e813a14ee8ae54e42', { stock: 0 });
   assert.equal(product.status, 'out_of_stock');
 });
 

@@ -1,6 +1,7 @@
 import { usersRepository } from '../repositories/users.repository.js';
 import { USER_ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/api-error.js';
+import { assertValidObjectId } from '../utils/object-id.js';
 
 const allowedFields = ['firstName', 'lastName', 'email'];
 const hasField = (data, key) => Object.prototype.hasOwnProperty.call(data, key);
@@ -50,6 +51,7 @@ export const createUsersService = (repository) => ({
   },
 
   async getById(id) {
+    assertValidObjectId(id);
     const user = await repository.findById(id);
     if (!user) throw new ApiError(404, 'Usuario no encontrado');
     return user;
@@ -63,12 +65,14 @@ export const createUsersService = (repository) => ({
   },
 
   async update(id, data) {
+    assertValidObjectId(id);
     const updated = await repository.updateById(id, normalizeUser(data, true));
     if (!updated) throw new ApiError(404, 'Usuario no encontrado');
     return updated;
   },
 
   async remove(id) {
+    assertValidObjectId(id);
     const deleted = await repository.deleteById(id);
     if (!deleted) throw new ApiError(404, 'Usuario no encontrado');
   }

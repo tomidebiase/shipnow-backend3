@@ -133,3 +133,84 @@ Los usuarios nuevos reciben el rol `user`. La API no permite asignar o modificar
 ## Alcance
 
 Esta primera versión organiza las entidades Products y Users y deja lista la configuración común para módulos posteriores. No incluye inicio de sesión, autenticación ni autorización; las rutas deben utilizarse en un entorno de desarrollo hasta incorporar esas protecciones.
+
+## Pre-entrega Módulo 2 — Mocking y carga de datos
+
+El módulo permite generar datos de prueba sin guardarlos o insertarlos en MongoDB. Conserva el esquema de usuarios existente y agrega el rol `repartidor`, pedidos con estado y prioridad, y entregas relacionadas con pedidos y repartidores.
+
+### Estructura y relaciones
+
+- `src/routes/mocks.router.js`: expone las rutas HTTP.
+- `src/controllers/mocks.controller.js`: maneja las peticiones y respuestas.
+- `src/services/mocks.generator.js`: genera usuarios, repartidores, pedidos y entregas relacionados.
+- `src/services/mocks.service.js`: valida cantidades y controla las cargas.
+- `src/repositories/mocks.repository.js`: encapsula las inserciones en MongoDB.
+- `src/models/order.model.js` y `src/models/delivery.model.js`: modelan pedidos y entregas.
+
+Los pedidos tienen una referencia a un usuario con rol `user`. Las entregas referencian un pedido y, si están asignadas, un usuario con rol `repartidor`. Los roles, estados y prioridades se definen como constantes inmutables y se utilizan en los esquemas.
+
+### Datos simulados que no se guardan
+
+Con la API levantada mediante `npm start`:
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| GET | `/api/mocks/users?qty=2` | Dos usuarios simulados |
+| GET | `/api/mocks/couriers?qty=2` | Dos repartidores |
+| GET | `/api/mocks/orders?qty=2` | Dos pedidos |
+| GET | `/api/mocks/deliveries?qty=2` | Dos entregas |
+| GET | `/api/mocks/bundle?qty=2` | Conjunto de usuarios, repartidores, pedidos y entregas con referencias coherentes |
+
+```bash
+curl -i "http://localhost:3000/api/mocks/users?qty=2"
+curl -i "http://localhost:3000/api/mocks/bundle?qty=3"
+```
+
+Los endpoints individuales generan conjuntos independientes; para comprobar referencias entre entidades usá `/api/mocks/bundle`. Ninguna de estas consultas inserta datos en MongoDB.
+
+El parámetro `qty` es opcional, predeterminado a 10, y acepta enteros entre 1 y 100. Un valor fuera de rango devuelve HTTP 400.
+
+### Carga de datos de prueba en MongoDB
+
+Carga simple: inserta usuarios simulados en `users`.
+
+```bash
+curl -i -X POST "http://localhost:3000/api/mocks/seed?qty=10"
+```
+
+Respuesta HTTP 201:
+
+```json
+{ "insertados": 10, "coleccion": "usuarios" }
+```
+
+Carga completa: inserta clientes y repartidores en `users`, pedidos en `orders` y entregas en `deliveries`.
+
+```bash
+curl -i -X POST "http://localhost:3000/api/mocks/seed/all?qty=10"
+```
+
+Respuesta HTTP 201 de ejemplo:
+
+```json
+{
+  "insertados": { "usuarios": 14, "repartidores": 4, "pedidos": 10, "entregas": 10 },
+  "colecciones": ["usuarios", "pedidos", "entregas"]
+}
+```
+
+`repartidores` es un subconjunto de `usuarios`, no un conteo adicional. Los correos usan `example.test` y un identificador aleatorio para evitar colisiones entre tandas.
+
+En caso de falla, el repositorio intenta retirar solo los documentos creados durante esa solicitud. Esta compensación no equivale a una transacción atómica.
+
+La carga está bloqueada cuando `NODE_ENV=production`. En desarrollo los endpoints no tienen autenticación: no expongas públicamente el servidor. Para observar datos insertados podés usar MongoDB Atlas; las rutas GET de mocks generan nuevas muestras y no leen los registros guardados.
+
+### Pruebas y observaciones de la entrega anterior
+
+```bash
+npm test
+```
+
+Las pruebas verifican generación de datos, roles, estados, prioridades, asociaciones, límites de cantidad, endpoints HTTP y bloqueo de inserciones en producción. La carga real de datos relacionada debe comprobarse contra MongoDB antes de la entrega.
+
+Se agregó validación de ObjectId en los servicios para responder HTTP 400 a identificadores mal formados y HTTP 404 a registros válidos inexistentes.
